@@ -74,35 +74,50 @@ Background.prototype.draw = function (ctx) {
 //array for the live targets, pushed when adding new, shift after kill animation
 function Target_Spawner(game) {
     this.targets = [];
-    this.game = game;
+    Entity.call(this, game, 0, 0);
 }
 
 Target_Spawner.prototype = new Entity();
 Target_Spawner.prototype.constructor = Target_Spawner;
 
 Target_Spawner.prototype.update = function() {
+    //if random 0-19 = 0
+    //  x = flor(random * (right bounds - something) + something)
+    //  y = floor(random * (bottom bounds - something2) + something2)
+    //  type = floor(random * 3)
+    //  make a target with those coords and add it to the array
+    if (Math.floor(Math.random() * 100) == 0) {
+        this.targets.push(new Target(this.game, Math.floor(Math.random() * (this.game.ctx.canvas.width - 90) ),
+             Math.floor(Math.random() * (this.game.ctx.canvas.height - 177) ), Math.floor(Math.random() * 3)));
+    }
+    
 
+    //update and draw for each target in targets[]
+    this.targets.forEach(function(target) {
+        target.update();
+    });
 }
 
 Target_Spawner.prototype.draw = function(ctx) {
-
+    this.targets.forEach(function(target) {
+        target.draw(ctx);
+    });
+    var i = 0;
+    // for (i; i < this.targets.length; i++) {
+    //     this.targets[i].draw();
+    // }
 }
-
-
 
 //target object
 //var to determine placement and if it is alive
 
 function Target(game, x, y, type) {
-    this.game = game;
-    this.x = x;
-    this.y = y;
     this.live = true;
     // this.animation = new Animation(ASSET_MANAGER.getAsset("./img/RobotUnicorn.png"), 0, 0, 206, 110, 0.02, 30, true, true);
-    this.spawnAnim = new Animation(ASSET_MANAGER.getAsset("./img/targets.png"), 0, 0, 90, 171, 0.4, 2, false, false);
-    this.idle = new Animation(ASSET_MANAGER.getAsset("./img/targets.png"), (type * 90), 342, 90, 171, 1, 1, true, false);
-    this.deathAnim = new Animation(ASSET_MANAGER.getAsset("./img/targets.png"), 0, 171, 90, 171, 0.4, 2, false, false);
-
+    this.spawnAnim = new Animation(ASSET_MANAGER.getAsset("./img/targets.png"), 0, 0, 90, 171, 0.2, 2, false, false);
+    this.idle = new Animation(ASSET_MANAGER.getAsset("./img/targets.png"), (type * 90), 353, 90, 171, 1, 1, true, false);
+    this.deathAnim = new Animation(ASSET_MANAGER.getAsset("./img/targets.png"), 0, 171, 90, 171, 0.2, 2, false, false);
+    Entity.call(this, game, x, y);
 }
 
 Target.prototype = new Entity();
@@ -113,7 +128,15 @@ Target.prototype.update = function() {
 }
 
 Target.prototype.draw = function(ctx) {
-    
+    if (this.spawnAnim.isDone()) {
+        if (this.live) {
+            this.idle.drawFrame(this.game.clockTick, ctx, this.x, this.y, 1);
+        } else {
+            this.deathAnim.drawFrame(this.game.clockTick, ctx, this.x, this.y, 1);
+        }
+    } else {
+        this.spawnAnim.drawFrame(this.game.clockTick, ctx, this.x, this.y, 1);
+    }
 }
 
 //shooter object
@@ -144,18 +167,30 @@ Shooter.prototype.draw = function(ctx) {
 //shooting will make the bullet go where the shooter is pointing and then set it to live
 
 function Bullet(game, x, y) {
-
+    this.duration = 3;
+    this.counter = 0;
+    this.live = false;
+    Entity.call(this, game, x, y);
 }
 
 Bullet.prototype = new Entity();
 Bullet.prototype.constructor = Bullet;
 
 Bullet.prototype.update = function() {
-
+    if (this.live) {
+        if (this.counter++ >= this.duration) {
+            this.live = false;
+            this.counter = 0;
+        }
+    }
+    // Entity.prototype.update.call(this);
 }
 
 Bullet.prototype.draw = function(ctx) {
-    
+    if (this.live) {
+        //draw 
+    }
+    // Entity.prototype.draw.call(this);
 }
 
 function BoundingBox(x, y, width, height) {
@@ -190,8 +225,17 @@ ASSET_MANAGER.downloadAll(function () {
     var gameEngine = new GameEngine();
     var bg = new Background(gameEngine);
     var shooter = new Shooter(gameEngine);
+    var t = new Target_Spawner(gameEngine);
+    // var t1 = new Target(gameEngine, 50, 50, 0);
+    // var t2 = new Target(gameEngine, 100, 100, 1);
+    // var t3 = new Target(gameEngine, 150, 150, 2);
+
 
     gameEngine.addEntity(bg);
+    gameEngine.addEntity(t);
+    // gameEngine.addEntity(t1);
+    // gameEngine.addEntity(t2);
+    // gameEngine.addEntity(t3);
     gameEngine.addEntity(shooter);
  
     gameEngine.init(ctx);
