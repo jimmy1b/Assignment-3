@@ -62,12 +62,17 @@ GameEngine.prototype.startInput = function () {
     var that = this;
 
     this.ctx.canvas.addEventListener("keydown", function (e) {
-        if (String.fromCharCode(e.which) === ' ') that.space = true;
-//        console.log(e);
+        if (e.keyCode == 70) that.flashtoggle = true;
+        console.log(e);
         e.preventDefault();
     }, false);
 
     console.log('Input started');
+
+    this.ctx.canvas.addEventListener("keyup", function (e) {
+        if (e.keyCode == 70) that.flashtoggle = false;
+        console.log(e);
+    }, false);
 }
 
 GameEngine.prototype.addEntity = function (entity) {
