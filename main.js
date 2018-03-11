@@ -2,6 +2,37 @@ var bounding_box = false;
 var flash = false;
 var score = 0;
 
+var gameEngine;
+
+//data to be saved and loaded
+var t;
+var bullet;
+var shooter;
+
+var socket = io.connect("http://24.16.255.56:8888");
+
+socket.on("load", function (data) {
+    t.targets = [];
+    t.dead = [];
+    flash = data.fflash;
+    score = data.sscore;
+    shooter.x = data.shooterpos[0];
+    shooter.y = data.shooterpos[1];
+    data.livetargets.forEach(function(target) {
+        var temp = new Target(gameEngine, target.x, target.y, target.type)
+        temp.live = target.live;
+        temp.isIdle = target.idle;
+        t.targets.push(temp);
+    });
+    data.deadtargets.forEach(function(target) {
+        var temp = new Target(gameEngine, target.x, target.y, target.type)
+        temp.live = target.live;
+        temp.isIdle = target.idle;
+        t.dead.push(temp);
+    });
+    // gameEngine.clockTick = data.clock;
+});
+
 function Animation(spriteSheet, startX, startY, frameWidth, frameHeight, frameDuration, frames, loop, reverse) {
     this.spriteSheet = spriteSheet;
     this.startX = startX;
@@ -93,7 +124,7 @@ Target_Spawner.prototype.update = function() {
     //  make a target with those coords and add it to the array
     // if (Math.floor(Math.random() * 10) == 0) { //faster spawning for testing
     if (Math.floor(Math.random() * 30) == 0) {
-        console.log("new spawn");
+        // console.log("new spawn");
         this.targets.push(new Target(this.game, Math.floor(Math.random() * (this.game.ctx.canvas.width - 90 + 75) ),
              Math.floor(Math.random() * (this.game.ctx.canvas.height - 177 + 110) ), Math.floor(Math.random() * 3)));
     }
@@ -127,12 +158,24 @@ Target_Spawner.prototype.draw = function(ctx) {
     // }
 }
 
+//basic target for saving
+function bTarget(x, y, live, idle, type) {
+    this.x = x;
+    this.y = y;
+    this.live = live;
+    this.idle = idle;
+    this.type = type;
+}
+
+bTarget.prototype.constructor = bTarget;
+
 //target object
 //var to determine placement and if it is alive
 
 function Target(game, x, y, type) {
     this.live = true;
     this.dead = false;
+    this.isIdle = false;
     // this.animation = new Animation(ASSET_MANAGER.getAsset("./img/RobotUnicorn.png"), 0, 0, 206, 110, 0.02, 30, true, true);
     this.spawnAnim = new Animation(ASSET_MANAGER.getAsset("./img/targets.png"), 0, 0, 90, 171, 0.1, 2, false, false);
     this.idle = new Animation(ASSET_MANAGER.getAsset("./img/targets.png"), (type * 90), 353, 90, 171, 1, 1, true, false);
@@ -149,7 +192,7 @@ Target.prototype.update = function() {
 }
 
 Target.prototype.draw = function(ctx) {
-    if (this.spawnAnim.isDone()) {
+    if (this.isIdle) {
         if (this.live) {
             this.idle.drawFrame(this.game.clockTick, ctx, this.x - 45, this.y - 80, 1);
         } else {
@@ -157,6 +200,7 @@ Target.prototype.draw = function(ctx) {
         }
     } else {
         this.spawnAnim.drawFrame(this.game.clockTick, ctx, this.x - 45, this.y - 80, 1);
+        if (this.spawnAnim.isDone()) this.isIdle = true;
     }
 
     if(bounding_box) {
@@ -191,10 +235,10 @@ Shooter.prototype.update = function() {
     if (this.target == null || !this.target.live) {
         if (this.spawner.targets[0] && this.spawner.targets[0].live) {
             this.target = this.spawner.targets[0];
-            console.log("new target");
+            // console.log("new target");
         } else if (this.spawner.targets[1]) {
             this.target = this.spawner.targets[1];
-            console.log("new target");
+            // console.log("new target");
         }
     } else {
         // this.speed = Math.min(this.maxSpeed, 4 * Math.log10(Math.sqrt(Math.pow(this.dx, 2), Math.pow(this.dy, 2))))
@@ -219,6 +263,31 @@ Shooter.prototype.update = function() {
 
         // this.x += this.speed * Math.cos(this.angle);
         // this.y += this.speed * Math.sin(this.angle);
+    }
+
+    if (this.game.saveb) {
+        var shp = [this.x, this.y];
+        var liveT = [];
+        var deadT = [];
+        // var clock = this.game.clockTick;
+        // score
+        // flash
+        // bounding
+        this.spawner.targets.forEach(function(target) {
+            liveT.push(new bTarget(target.x, target.y, target.live, target.isIdle, target.type));
+        });
+        this.spawner.dead.forEach(function(target) {
+            deadT.push(new bTarget(target.x, target.y, target.live, target.isIdle, target.type));
+        });
+        socket.emit("save", { studentname: "Jimmy Best", statename: "aState",
+                            shooterpos: shp, sscore: score, fflash: flash, bound: bounding_box,
+                            livetargets: liveT, deadtargets: deadT});
+        this.game.saveb = false;
+    }
+
+    if (this.game.loadb) {
+        socket.emit("load", { studentname: "Jimmy Best", statename: "aState" });
+        this.game.loadb = false;
     }
 }
 
@@ -294,13 +363,18 @@ Score.prototype = new Entity();
 Score.prototype.constructor = Score;
 
 Score.prototype.update = function() {
-    if (this.game.flashtoggle) flash = !flash;
+    if (this.game.boundingtoggle) bounding_box = !bounding_box, this.game.boundingtoggle = false;
+    if (this.game.flashtoggle) flash = !flash, this.game.flashtoggle = false;
 }
 
 Score.prototype.draw = function(ctx) {
     this.game.ctx.font = "20px Arial";
-    this.game.ctx.fillstyle = "black"
+    this.game.ctx.fillstyle = "black";
     this.game.ctx.fillText("SCORE: " + score, this.x, this.y);
+
+    this.game.ctx.font = "18px Arial";
+    this.game.ctx.fillstyle = "white"
+    this.game.ctx.fillText("s: save, l: load, b: bounding boxes, f: flash", 400, 495);
 }
 
 function BoundingBox(x, y, width, height) {
@@ -334,11 +408,11 @@ ASSET_MANAGER.downloadAll(function () {
     var canvas = document.getElementById('gameWorld');
     var ctx = canvas.getContext('2d');
 
-    var gameEngine = new GameEngine();
+    gameEngine = new GameEngine();
     var bg = new Background(gameEngine);
-    var t = new Target_Spawner(gameEngine);
-    var bullet = new Bullet(gameEngine, 50, 50);
-    var shooter = new Shooter(gameEngine, t, bullet);
+    t = new Target_Spawner(gameEngine);
+    bullet = new Bullet(gameEngine, 50, 50);
+    shooter = new Shooter(gameEngine, t, bullet);
     var scoree = new Score(gameEngine);
     // var t1 = new Target(gameEngine, 50, 50, 0);
     // var t2 = new Target(gameEngine, 100, 100, 1);

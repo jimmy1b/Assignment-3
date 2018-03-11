@@ -63,16 +63,22 @@ GameEngine.prototype.startInput = function () {
 
     this.ctx.canvas.addEventListener("keydown", function (e) {
         if (e.keyCode == 70) that.flashtoggle = true;
+        if (e.keyCode == 66) that.boundingtoggle = true;
+        if (e.keyCode == 83) that.saveb = true;
+        if (e.keyCode == 76) that.loadb = true;
         console.log(e);
         e.preventDefault();
     }, false);
 
     console.log('Input started');
 
-    this.ctx.canvas.addEventListener("keyup", function (e) {
-        if (e.keyCode == 70) that.flashtoggle = false;
-        console.log(e);
-    }, false);
+    // this.ctx.canvas.addEventListener("keyup", function (e) {
+    //     if (e.keyCode == 70) that.flashtoggle = false;
+    //     if (e.keyCode == 66) that.boundingtoggle = false;
+    //     if (e.keyCode == 83) that.saveb = false;
+    //     if (e.keyCode == 76) that.loadb = false;
+    //     console.log(e);
+    // }, false);
 }
 
 GameEngine.prototype.addEntity = function (entity) {
