@@ -21,7 +21,7 @@ socket.on("load", function (data) {
     data.livetargets.forEach(function(target) {
         var temp = new Target(gameEngine, target.x, target.y, target.type)
         temp.live = target.live;
-        temp.isIdle = target.idle;
+        // temp.isIdle = target.idle;
         t.targets.push(temp);
     });
     data.deadtargets.forEach(function(target) {
@@ -176,6 +176,7 @@ function Target(game, x, y, type) {
     this.live = true;
     this.dead = false;
     this.isIdle = false;
+    this.type = type;
     // this.animation = new Animation(ASSET_MANAGER.getAsset("./img/RobotUnicorn.png"), 0, 0, 206, 110, 0.02, 30, true, true);
     this.spawnAnim = new Animation(ASSET_MANAGER.getAsset("./img/targets.png"), 0, 0, 90, 171, 0.1, 2, false, false);
     this.idle = new Animation(ASSET_MANAGER.getAsset("./img/targets.png"), (type * 90), 353, 90, 171, 1, 1, true, false);
@@ -275,6 +276,7 @@ Shooter.prototype.update = function() {
         // bounding
         this.spawner.targets.forEach(function(target) {
             liveT.push(new bTarget(target.x, target.y, target.live, target.isIdle, target.type));
+            // console.log(target.type);
         });
         this.spawner.dead.forEach(function(target) {
             deadT.push(new bTarget(target.x, target.y, target.live, target.isIdle, target.type));
